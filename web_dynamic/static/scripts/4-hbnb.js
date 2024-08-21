@@ -1,71 +1,117 @@
-$(document).ready(function() {
-    const amenityIds = {};  // Variable to store Amenity IDs
+const $ = window.$;
+let amenities = [];
 
-    // Listen for changes on each input checkbox using change()-an event handler
-    $('input[type="checkbox"]').change(function() {
-        const amenityId = $(this).data('id');
-        const amenityName = $(this).data('name');
-
-        if ($(this).is(':checked')) {
-            // Checkbox is checked, store Amenity ID and name in the amenityIds variable
-            amenityIds[amenityId] = amenityName;
-        } else {
-            // Checkbox is unchecked, remove Amenity ID
-            delete amenityIds[amenityId];
-        }
-
-        // Update the h4 tag inside the div Amenities with the list of Amenities checked
-        const amenityList = Object.values(amenityIds).join(', ');
-        $('.popover h4').text(amenityList);
-    });
-
-    // Handle button click to send a new POST request with the list of amenities
-    $('button').click(function() {
-        // Make a POST request to the places_search endpoint with the list of checked amenities
-        $.ajax({
-            url: 'http://0.0.0.0:5001/api/v1/places_search',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ amenities: Object.values(amenityIds) }),  // Send the list of amenities
-            success: function(data) {
-                // Handle the response data as needed
-                console.log('Response from places_search:', data);
-            },
-            error: function() {
-                // Handle error if the request to places_search fails
-                console.error('Error: Unable to fetch places.');
-            }
-        });
-    });
-
-    // Send HTTP request to check API status
-    $.ajax({
-        url: 'http://0.0.0.0:5001/api/v1/places_search',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({}),
-        success: function(data) {
-            // Check the API status and update the class of div#api_status accordingly
-            if (data.status === 'OK') {
-                $('#api_status').addClass('available');
-            } else {
-                $('#api_status').removeClass('available');
-            }
-
-            // Loop through the results and create article tags representing Places
-            const placesSection = $('.places');
-            placesSection.empty();  // Clear existing content
-
-            data.places.forEach(place => {
-                const article = $('<article>');
-                article.text(place.description);  // Assuming place description is a valid property
-
-                placesSection.append(article);
-            });
-        },
-        error: function() {
-            // Handle error if the request to check API status fails
-            console.error('Error: Unable to fetch API status.');
-        }
-    });
+$(document).ready(function () {
+  // code run once document is ready
+  $('.amenity_checkbox').click(function () {
+    let amenityID = $(this).data('id');
+    if (amenities.includes(amenityID)) {
+      let index = amenities.indexOf(amenityID);
+      if (index !== -1) {
+        amenities.splice(index, 1);
+      }
+    } else {
+      amenities.push(amenityID);
+    }
+    console.log(amenities);
+  });
+  let request = $.get('http://0.0.0.0:5001/api/v1/status');
+  request.done(function (data, status) {
+    console.log(data['status']);
+    if (data['status'] === 'OK') {
+      $('#api_status').addClass('available');
+    } else {
+      $('#api_status').removeClass('available');
+    }
+  });
+  request.fail(function (jqXHR, textStatus, errorThrown) {
+    console.log(jqXHR, textStatus, errorThrown);
+    $('#api_status').removeClass('available');
+  });
+  updatePlaces();
+  $('button').click(updatePlaces);
 });
+
+// functions for fetching api data and formatting html
+function updatePlaces() {
+  let jsonData = '{}'
+  if (amenities.length !== 0) {
+    
+    jsonData = {
+      'amenities': amenities,
+      'states': '[]',
+      'cities': '[]'
+    };
+    jsonData = JSON.stringify(jsonData);
+    console.log('parsed data: ' + jsonData);
+  }
+  $('.places').empty();
+  $.ajax({
+    url: 'http://0.0.0.0:5001/api/v1/places_search',
+    type: 'POST',
+    contentType: 'application/json; charset=utf-8',
+    dataType: 'json',
+    data: jsonData,
+    success: getPlaces
+  });
+}
+
+function getPlaces(data) {
+    for (let place of data) {
+      let name = place['name'];
+      let priceByNight = place['price_by_night'];
+      let maxGuest = place['max_guest'];
+      let numberRooms = place['number_rooms'];
+      let numberBRooms = place['number_bathrooms'];
+      let description = place['description'];
+
+      let block = `
+<article>
+<div class="title">
+<h2>${name}</h2>
+
+      <div class="price_by_night">
+
+    ${priceByNight}
+
+    </div>
+</div>
+<div class="information">
+  <div class="max_guest">
+    <i class="fa fa-users fa-3x" aria-hidden="true"></i>
+
+      <br />
+
+    ${maxGuest} Guests
+    
+    </div>
+<div class="number_rooms">
+<i class="fa fa-bed fa-3x" aria-hidden="true"></i>
+
+      <br />
+
+    ${numberRooms} Bedrooms
+    </div>
+<div class="number_bathrooms">
+<i class="fa fa-bath fa-3x" aria-hidden="true"></i>
+
+      <br />
+
+    ${numberBRooms} Bathroom
+
+       </div>
+
+    </div>
+
+    </div>
+   <div class="description">
+
+    ${description}
+
+    </div>
+</article>
+`;
+
+      $('section.places').append(block);
+    }
+  }

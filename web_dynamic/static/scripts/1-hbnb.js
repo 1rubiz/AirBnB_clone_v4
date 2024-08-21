@@ -1,25 +1,17 @@
-// wrapped in $(document).ready(function() {})
-// to ensure it executes only when the DOM is fully loaded.
+const $ = window.$;
+let amenities = [];
 
-$(document).ready(function() {
-    const amenityIds = {};  // Variable to store Amenity IDs
-
-    // Listen for changes on each input checkbox using change()-an event handler
-    $('input[type="checkbox"]').change(function() {
-      const amenityId = $(this).data('id');
-      const amenityName = $(this).data('name');
-
-      if ($(this).is(':checked')) {
-        // Checkbox is checked, store Amenity ID and name in the amenityIds variable
-        amenityIds[amenityId] = amenityName;
+$(document).ready(function () {
+    $('.amenity_checkbox').click(function () {
+      let amenity_id = $(this).data('id');
+      if (amenities.includes(amenity_id)) {
+        let index = amenities.indexOf(amenity_id);
+        if (index !== -1) {
+          amenities.splice(index, 1);
+        }
       } else {
-        // Checkbox is unchecked, remove Amenity ID
-        delete amenityIds[amenityId];
+        amenities.push(amenity_id);
       }
-
-      // Update the h4 tag inside the div Amenities with the list of Amenities checked
-      // use dom methods text, values - for dom manipulation
-      const amenityList = Object.values(amenityIds).join(', ');
-      $('.popover h4').text(amenityList);
-    });
+      console.log(amenities);
   });
+});
